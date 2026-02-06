@@ -257,19 +257,54 @@ p {
   border-radius: 16px;
   background: #fffdfb;
   border: 1px solid #edd7c8;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-items: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
 }
 
 .stat h3 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 0.95rem;
   color: var(--muted);
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  min-height: 2.2em;
+  align-self: start;
 }
 
 .stat .value {
   font-size: 1.4rem;
   font-weight: 700;
+  line-height: 1.1;
+  align-self: center;
+}
+
+.recovery-ring {
+  --recovery: 0;
+  --recovery-color: #d96a5a;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    conic-gradient(var(--recovery-color) calc(var(--recovery) * 1%), rgba(32, 26, 26, 0.12) 0);
+}
+
+.recovery-inner {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: #fffdfb;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--ink);
+  border: 1px solid #edd7c8;
 }
 
 .section-title {

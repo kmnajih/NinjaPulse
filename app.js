@@ -52,6 +52,7 @@ async function init() {
   } else {
     whoopStatus.textContent = "Not connected";
     statusLine.textContent = "Waiting for connection.";
+    await loadHabits();
   }
 
   if (gmailStatus?.connected) {
@@ -62,14 +63,16 @@ async function init() {
   } else {
     gmailStatusEl.textContent = "Not connected";
   }
-
-  await loadHabits();
 }
 
 async function loadDashboard() {
   statusLine.textContent = "Loading WHOOP data...";
-  const payload = await fetchJson("/api/health");
-  if (!payload) {
+  const [health, phone, habits] = await Promise.all([
+    fetchJson("/api/health"),
+    fetchJson("/api/phone"),
+    fetchJson("/api/habits"),
+  ]);
+  if (!health) {
     statusLine.textContent = "Unable to load data.";
     return;
   }
@@ -77,12 +80,12 @@ async function loadDashboard() {
   whoopStatus.textContent = "Connected";
   refreshWhoopBtn.disabled = false;
   disconnectBtn.disabled = false;
-  statusLine.textContent = `Updated ${new Date(payload.generated_at).toLocaleString()}`;
+  statusLine.textContent = `Updated ${new Date(health.generated_at).toLocaleString()}`;
 
-  renderStats(statsEl, payload.summary);
-  renderStats(sleepDetailsEl, payload.sleep_details);
-  await loadPhoneUsage(payload.summary);
-  await loadHabits();
+  renderStats(statsEl, buildTopSummary(health.summary, phone, habits));
+  renderStats(sleepDetailsEl, health.sleep_details);
+  renderPhoneUsageSection(phone);
+  renderHabitsSection(habits);
 }
 
 async function fetchJson(path) {
@@ -112,33 +115,114 @@ function makeStat(label, value) {
   card.className = "stat";
   const title = document.createElement("h3");
   title.textContent = label;
+  card.appendChild(title);
+
+  if (label === "Recovery score") {
+    const percent = parsePercent(value);
+    return renderPercentRing(card, percent, recoveryColor(percent));
+  }
+
+  if (isSleepPercentLabel(label)) {
+    const percent = parsePercent(value);
+    return renderPercentRing(card, percent, sleepPercentColor(label, percent));
+  }
+
+  if (label === "Habits done") {
+    const percent = parsePercent(value);
+    return renderPercentRing(card, percent, habitsPercentColor(percent));
+  }
+
   const val = document.createElement("div");
   val.className = "value";
   val.textContent = value;
-  card.appendChild(title);
   card.appendChild(val);
   return card;
 }
 
-async function loadPhoneUsage(mainSummary = null) {
-  const data = await fetchJson("/api/phone");
+function renderPercentRing(card, percent, color) {
+  const ring = document.createElement("div");
+  ring.className = "recovery-ring";
+  ring.style.setProperty("--recovery", String(Number.isFinite(percent) ? percent : 0));
+  ring.style.setProperty("--recovery-color", color);
+
+  const inner = document.createElement("div");
+  inner.className = "recovery-inner";
+  inner.textContent = Number.isFinite(percent) ? `${percent}%` : "-";
+  ring.appendChild(inner);
+  card.classList.add("recovery");
+  card.appendChild(ring);
+  return card;
+}
+
+function parsePercent(value) {
+  if (!value) return NaN;
+  const cleaned = String(value).replace("%", "").trim();
+  const num = Number.parseFloat(cleaned);
+  if (!Number.isFinite(num)) return NaN;
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+
+function recoveryColor(percent) {
+  if (!Number.isFinite(percent)) return "#d96a5a";
+  if (percent <= 33) return "#d96a5a";
+  if (percent <= 66) return "#e4b446";
+  return "#3a9b63";
+}
+
+function isSleepPercentLabel(label) {
+  return label === "Sleep performance" || label === "Sleep efficiency" || label === "Sleep consistency";
+}
+
+function sleepPercentColor(label, percent) {
+  if (!Number.isFinite(percent)) return "#e4b446";
+
+  if (label === "Sleep performance") {
+    if (percent > 85) return "#3a9b63";
+    if (percent >= 70) return "#3a78c2";
+    return "#e4b446";
+  }
+
+  if (label === "Sleep efficiency") {
+    if (percent > 90) return "#3a9b63";
+    if (percent >= 80) return "#3a78c2";
+    return "#e4b446";
+  }
+
+  if (label === "Sleep consistency") {
+    if (percent >= 80) return "#3a9b63";
+    if (percent >= 70) return "#3a78c2";
+    return "#e4b446";
+  }
+
+  return "#e4b446";
+}
+
+function habitsPercentColor(percent) {
+  if (!Number.isFinite(percent)) return "#e4b446";
+  return percent >= 50 ? "#3a9b63" : "#e4b446";
+}
+
+async function loadPhoneUsage() {
+  const phone = await fetchJson("/api/phone");
+  renderPhoneUsageSection(phone);
+
+  if (whoopStatus.textContent === "Connected") {
+    const [health, habits] = await Promise.all([
+      fetchJson("/api/health"),
+      fetchJson("/api/habits"),
+    ]);
+    if (health) {
+      renderStats(statsEl, buildTopSummary(health.summary, phone, habits));
+      renderStats(sleepDetailsEl, health.sleep_details);
+    }
+  }
+}
+
+function renderPhoneUsageSection(data) {
   if (!data) {
     phoneSummaryEl.innerHTML = "<p>Connect Gmail to load phone usage.</p>";
     phoneAppsEl.innerHTML = "";
     return;
-  }
-
-  if (data.daily?.usage_time) {
-    if (mainSummary) {
-      mainSummary.push({ label: "Phone usage", value: data.daily.usage_time });
-      renderStats(statsEl, mainSummary);
-    } else {
-      const summary = await fetchJson("/api/health");
-      if (summary?.summary) {
-        summary.summary.push({ label: "Phone usage", value: data.daily.usage_time });
-        renderStats(statsEl, summary.summary);
-      }
-    }
   }
 
   const summary = [];
@@ -167,7 +251,11 @@ async function loadPhoneUsage(mainSummary = null) {
 }
 
 async function loadHabits() {
-  const data = await fetchJson("/api/habits");
+  const habits = await fetchJson("/api/habits");
+  renderHabitsSection(habits);
+}
+
+function renderHabitsSection(data) {
   if (!data) {
     habitSummaryEl.innerHTML = "<p>Add Habitify API key to load habits.</p>";
     habitListEl.innerHTML = "";
@@ -195,6 +283,28 @@ async function loadHabits() {
     row.appendChild(badge);
     habitListEl.appendChild(row);
   });
+}
+
+function buildTopSummary(healthSummary, phone, habits) {
+  const summary = Array.isArray(healthSummary) ? healthSummary.slice() : [];
+  if (phone?.daily?.usage_time) {
+    upsertSummary(summary, "Phone usage", phone.daily.usage_time);
+  }
+  if (habits?.habits?.length) {
+    const done = habits.habits.filter((habit) => habit.status === "done").length;
+    const percent = Math.round((done / habits.habits.length) * 100);
+    upsertSummary(summary, "Habits done", `${percent}%`);
+  }
+  return summary;
+}
+
+function upsertSummary(summary, label, value) {
+  const existing = summary.find((item) => item.label === label);
+  if (existing) {
+    existing.value = value;
+  } else {
+    summary.push({ label, value });
+  }
 }
 
 function timeToMinutes(value) {
