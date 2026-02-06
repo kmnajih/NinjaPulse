@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Personal Health Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg"></div>
+    <header class="site-header">
+      <div class="brand">
+        <div class="brand-mark">Pulse</div>
+        <div>
+          <h1>Personal Health Dashboard</h1>
+          <p>Health insights with real-time metrics.</p>
+        </div>
+      </div>
+      <div class="meta"></div>
+    </header>
+
+    <main class="container">
+      <section class="card summary">
+        <h2>Summary</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="card summary">
+        <h2>Sleep Details</h2>
+        <div class="stats" id="sleepDetails"></div>
+      </section>
+
+      <section class="card summary">
+        <h2>Phone Usage Details</h2>
+        <div class="stats" id="phoneSummary"></div>
+        <div class="section-title">
+          <h3>Top used apps</h3>
+        </div>
+        <div class="list" id="phoneApps"></div>
+      </section>
+
+      <section class="card summary">
+        <h2>Habits</h2>
+        <div class="stats" id="habitSummary"></div>
+        <div class="list" id="habitList"></div>
+      </section>
+
+      <section class="card connect">
+        <div>
+          <h2>Connections</h2>
+          <p>Authorize this local dashboard to read your data. Tokens stay on this machine.</p>
+        </div>
+        <div class="connections">
+          <div class="connection-card">
+            <div>
+              <h3>WHOOP</h3>
+              <p class="muted">Health metrics (sleep, recovery, HRV).</p>
+            </div>
+            <div class="connection-actions">
+              <span class="status-pill" id="whoopStatus">Not connected</span>
+              <a class="file-btn" id="connectBtn" href="/login">Connect WHOOP</a>
+              <button id="refreshWhoopBtn" class="ghost" disabled>Refresh health</button>
+              <button id="disconnectBtn" class="ghost" disabled>Disconnect WHOOP</button>
+            </div>
+          </div>
+          <div class="connection-card">
+            <div>
+              <h3>Gmail</h3>
+              <p class="muted">App Usage daily digest.</p>
+            </div>
+            <div class="connection-actions">
+              <span class="status-pill" id="gmailStatus">Not connected</span>
+              <a class="file-btn ghost" id="connectGmailBtn" href="/gmail/login">Connect Gmail</a>
+              <button id="refreshGmailBtn" class="ghost" disabled>Refresh phone usage</button>
+              <button id="disconnectGmailBtn" class="ghost" disabled>Disconnect Gmail</button>
+            </div>
+          </div>
+        </div>
+        <div id="statusLine" class="drop">Waiting for connection.</div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <span>Built for local use. No data leaves your machine.</span>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
