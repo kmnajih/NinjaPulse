@@ -13,7 +13,9 @@ const { createLogger } = require("./lib/logger");
 const { createWhoopClient } = require("./lib/services/whoop");
 const { createGmailClient } = require("./lib/services/gmail");
 const { createHabitifyClient } = require("./lib/services/habitify");
+const { createFtpClient } = require("./lib/services/ftp");
 const { handleApiHealth } = require("./lib/health");
+const { parseUsageCsv } = require("./lib/parsers/appUsage");
 
 const BASE_DIR = __dirname;
 loadEnv(BASE_DIR);
@@ -50,6 +52,31 @@ const habitifyClient = createHabitifyClient({
   logger,
 });
 
+function logEvent(message, extra = "") {
+  const stamp = new Date().toISOString();
+  const suffix = extra ? ` ${extra}` : "";
+  console.log(`[${stamp}] ${message}${suffix}`);
+}
+
+function parseBoolean(value, fallback = true) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  return fallback;
+}
+
+const ftpClient = createFtpClient({
+  config: {
+    host: process.env.FTP_HOST || "",
+    port: process.env.FTP_PORT || "",
+    user: process.env.FTP_USER || "",
+    password: process.env.FTP_PASSWORD || "",
+    path: process.env.FTP_PATH || "/",
+    passive: parseBoolean(process.env.FTP_PASSIVE, true),
+  },
+});
+
 function clearWhoopTokens() {
   if (fs.existsSync(paths.whoop.tokenPath)) fs.unlinkSync(paths.whoop.tokenPath);
 }
@@ -67,8 +94,40 @@ function clearState(filePath) {
 }
 
 async function handleApiPhone(res) {
+  let ftpPayload = null;
+  if (ftpClient.isConfigured()) {
+    try {
+      logEvent("FTP phone usage: checking latest CSV");
+      const latest = await ftpClient.fetchLatestUsageCsv();
+      if (latest?.text) {
+        const parsed = parseUsageCsv(latest.text);
+        if (parsed?.daily) {
+          ftpPayload = {
+            ...parsed,
+            source: "ftp",
+            directory: latest.directory,
+            file: latest.file,
+            path: latest.path,
+            updated_at: new Date().toISOString(),
+          };
+          logEvent("FTP phone usage: parsed", `file=${latest.file}`);
+        }
+      }
+    } catch (error) {
+      logEvent("FTP phone usage failed", `error=${error?.message || error}`);
+      ftpPayload = null;
+    }
+  }
+
+  if (ftpPayload) {
+    writeJson(paths.gmail.phoneUsagePath, ftpPayload);
+    sendJson(res, 200, ftpPayload);
+    return;
+  }
+
   const token = await gmailClient.getAccessToken();
   if (!token) {
+    logEvent("Gmail phone usage: not connected");
     sendJson(res, 401, { error: "Gmail not connected." });
     return;
   }
@@ -76,18 +135,23 @@ async function handleApiPhone(res) {
   try {
     const parsed = await gmailClient.fetchLatestUsageEmail();
     if (!parsed) {
+      logEvent("Gmail phone usage: no email found");
       sendJson(res, 404, { error: "No app usage email found." });
       return;
     }
-    writeJson(paths.gmail.phoneUsagePath, parsed);
-    sendJson(res, 200, parsed);
+    const payload = { ...parsed, source: "gmail" };
+    writeJson(paths.gmail.phoneUsagePath, payload);
+    sendJson(res, 200, payload);
+    logEvent("Gmail phone usage: fetched");
   } catch (error) {
+    logEvent("Gmail phone usage failed", `error=${error?.message || error}`);
     sendJson(res, 500, { error: error?.message || "Failed to read Gmail." });
   }
 }
 
 async function handleApiHabits(res) {
   if (!process.env.HABITIFY_API_KEY) {
+    logEvent("Habitify: missing API key");
     sendJson(res, 500, { error: "Missing HABITIFY_API_KEY" });
     return;
   }
@@ -102,8 +166,33 @@ async function handleApiHabits(res) {
       status: resolveHabitStatus(entry),
     }));
     sendJson(res, 200, { date: targetDate, habits: simplified });
+    logEvent("Habitify: fetched", `date=${targetDate}`);
   } catch (error) {
+    logEvent("Habitify failed", `error=${error?.message || error}`);
     sendJson(res, 500, { error: error?.message || "Failed to load habits." });
+  }
+}
+
+async function handleApiFtp(res) {
+  if (!ftpClient.isConfigured()) {
+    logEvent("FTP list: not configured");
+    sendJson(res, 500, { error: "FTP not configured." });
+    return;
+  }
+
+  try {
+    const files = await ftpClient.listFiles();
+    const payload = {
+      updated_at: new Date().toISOString(),
+      path: ftpClient.config.path || "/",
+      files,
+    };
+    writeJson(paths.ftp.filesPath, payload);
+    sendJson(res, 200, payload);
+    logEvent("FTP list: fetched", `count=${files.length}`);
+  } catch (error) {
+    logEvent("FTP list failed", `error=${error?.message || error}`);
+    sendJson(res, 500, { error: error?.message || "Failed to list FTP files." });
   }
 }
 
@@ -204,6 +293,7 @@ const server = http.createServer(async (req, res) => {
         paths,
         sendJson: (status, payload) => sendJson(res, status, payload),
       });
+      logEvent("WHOOP health: fetched", `source=${parsed.query?.source || "unknown"}`);
       return;
     }
 
@@ -220,6 +310,16 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/gmail/status") {
       const token = await gmailClient.getAccessToken();
       sendJson(res, 200, { connected: Boolean(token) });
+      return;
+    }
+
+    if (pathname === "/api/ftp/status") {
+      sendJson(res, 200, { configured: ftpClient.isConfigured() });
+      return;
+    }
+
+    if (pathname === "/api/ftp") {
+      await handleApiFtp(res);
       return;
     }
 

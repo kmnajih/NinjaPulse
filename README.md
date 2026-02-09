@@ -34,6 +34,12 @@ GMAIL_REDIRECT_URI="http://localhost:8787/gmail/callback"
 GMAIL_SCOPES="https://www.googleapis.com/auth/gmail.readonly"
 GMAIL_SUBJECT_QUERY="subject:\"[App Usage]\" subject:\"Daily usage digest\""
 HABITIFY_API_KEY="your-habitify-api-key"
+FTP_HOST="your-ftp-host"
+FTP_PORT="21"
+FTP_USER="your-ftp-user"
+FTP_PASSWORD="your-ftp-password"
+FTP_PATH="/"
+FTP_PASSIVE="true"
 ```
 
 You can still use shell exports if you prefer.

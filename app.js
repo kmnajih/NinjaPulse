@@ -3,19 +3,24 @@ const refreshWhoopBtn = document.getElementById("refreshWhoopBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
 const disconnectGmailBtn = document.getElementById("disconnectGmailBtn");
 const refreshGmailBtn = document.getElementById("refreshGmailBtn");
+const refreshFtpBtn = document.getElementById("refreshFtpBtn");
 const statsEl = document.getElementById("stats");
-const sleepDetailsEl = document.getElementById("sleepDetails");
+const sleepDetailsPrimaryEl = document.getElementById("sleepDetailsPrimary");
+const sleepDetailsSecondaryEl = document.getElementById("sleepDetailsSecondary");
 const phoneSummaryEl = document.getElementById("phoneSummary");
 const phoneAppsEl = document.getElementById("phoneApps");
+const ftpSummaryLineEl = document.getElementById("ftpSummaryLine");
 const habitSummaryEl = document.getElementById("habitSummary");
 const habitListEl = document.getElementById("habitList");
 const whoopStatus = document.getElementById("whoopStatus");
 const gmailStatusEl = document.getElementById("gmailStatus");
+const ftpStatusEl = document.getElementById("ftpStatus");
 
 const PHONE_APP_MINUTES_THRESHOLD = 30;
 
 refreshWhoopBtn.addEventListener("click", () => loadDashboard());
 refreshGmailBtn.addEventListener("click", () => loadPhoneUsage());
+refreshFtpBtn.addEventListener("click", () => loadFtpFiles());
 disconnectBtn.addEventListener("click", async () => {
   await fetch("/logout", { method: "POST" });
   whoopStatus.textContent = "Not connected";
@@ -23,7 +28,8 @@ disconnectBtn.addEventListener("click", async () => {
   refreshWhoopBtn.disabled = true;
   disconnectBtn.disabled = true;
   statsEl.innerHTML = "";
-  sleepDetailsEl.innerHTML = "";
+  sleepDetailsPrimaryEl.innerHTML = "";
+  sleepDetailsSecondaryEl.innerHTML = "";
   phoneSummaryEl.innerHTML = "";
   phoneAppsEl.innerHTML = "";
   habitSummaryEl.innerHTML = "";
@@ -43,6 +49,7 @@ disconnectGmailBtn.addEventListener("click", async () => {
 async function init() {
   const status = await fetchJson("/api/status");
   const gmailStatus = await fetchJson("/api/gmail/status");
+  const ftpStatus = await fetchJson("/api/ftp/status");
   if (status?.connected) {
     whoopStatus.textContent = "Connected";
     statusLine.textContent = "Connected. Fetching latest metrics...";
@@ -63,12 +70,24 @@ async function init() {
   } else {
     gmailStatusEl.textContent = "Not connected";
   }
+
+  if (ftpStatus?.configured) {
+    ftpStatusEl.textContent = "Configured";
+    refreshFtpBtn.disabled = false;
+    await loadFtpFiles();
+    if (!gmailStatus?.connected) {
+      await loadPhoneUsage();
+    }
+  } else {
+    ftpStatusEl.textContent = "Not configured";
+    renderFtpStatus(null);
+  }
 }
 
 async function loadDashboard() {
   statusLine.textContent = "Loading WHOOP data...";
   const [health, phone, habits] = await Promise.all([
-    fetchJson("/api/health"),
+    fetchJson("/api/health?source=dashboard"),
     fetchJson("/api/phone"),
     fetchJson("/api/habits"),
   ]);
@@ -83,7 +102,7 @@ async function loadDashboard() {
   statusLine.textContent = `Updated ${new Date(health.generated_at).toLocaleString()}`;
 
   renderStats(statsEl, buildTopSummary(health.summary, phone, habits));
-  renderStats(sleepDetailsEl, health.sleep_details);
+  renderSleepDetails(health.sleep_details);
   renderPhoneUsageSection(phone);
   renderHabitsSection(habits);
 }
@@ -137,6 +156,29 @@ function makeStat(label, value) {
   val.textContent = value;
   card.appendChild(val);
   return card;
+}
+
+function renderSleepDetails(details) {
+  sleepDetailsPrimaryEl.innerHTML = "";
+  sleepDetailsSecondaryEl.innerHTML = "";
+  if (!details?.length) {
+    sleepDetailsPrimaryEl.innerHTML = "<p>No sleep details yet.</p>";
+    return;
+  }
+
+  const primaryLabels = ["Sleep duration", "Sleep debt"];
+  const primary = [];
+  const secondary = [];
+  details.forEach((item) => {
+    if (primaryLabels.includes(item.label)) {
+      primary.push(item);
+    } else {
+      secondary.push(item);
+    }
+  });
+
+  renderStats(sleepDetailsPrimaryEl, primary);
+  renderStats(sleepDetailsSecondaryEl, secondary);
 }
 
 function renderPercentRing(card, percent, color) {
@@ -208,19 +250,32 @@ async function loadPhoneUsage() {
 
   if (whoopStatus.textContent === "Connected") {
     const [health, habits] = await Promise.all([
-      fetchJson("/api/health"),
+      fetchJson("/api/health?source=phone"),
       fetchJson("/api/habits"),
     ]);
     if (health) {
       renderStats(statsEl, buildTopSummary(health.summary, phone, habits));
-      renderStats(sleepDetailsEl, health.sleep_details);
+      renderSleepDetails(health.sleep_details);
     }
+  }
+}
+
+async function loadFtpFiles() {
+  statusLine.textContent = "Loading FTP files...";
+  const data = await fetchJson("/api/ftp");
+  renderFtpStatus(data);
+  if (!data) {
+    statusLine.textContent = "Unable to load FTP files.";
+    return;
+  }
+  if (data?.updated_at) {
+    statusLine.textContent = `Updated ${new Date(data.updated_at).toLocaleString()}`;
   }
 }
 
 function renderPhoneUsageSection(data) {
   if (!data) {
-    phoneSummaryEl.innerHTML = "<p>Connect Gmail to load phone usage.</p>";
+    phoneSummaryEl.innerHTML = "<p>Connect Gmail or configure FTP to load phone usage.</p>";
     phoneAppsEl.innerHTML = "";
     return;
   }
@@ -248,6 +303,17 @@ function renderPhoneUsageSection(data) {
     row.appendChild(info);
     phoneAppsEl.appendChild(row);
   });
+}
+
+function renderFtpStatus(data) {
+  if (!ftpSummaryLineEl) return;
+  if (!data) {
+    ftpSummaryLineEl.textContent = "Configure FTP to load phone usage.";
+    return;
+  }
+  const count = Array.isArray(data.files) ? data.files.length : 0;
+  const path = data.path || "/";
+  ftpSummaryLineEl.textContent = `FTP reachable. ${count} items in ${path}.`;
 }
 
 async function loadHabits() {
@@ -309,6 +375,14 @@ function upsertSummary(summary, label, value) {
 
 function timeToMinutes(value) {
   if (!value) return 0;
+  const normalized = String(value).trim();
+  if (normalized.includes(":")) {
+    const parts = normalized.split(":").map((part) => Number.parseInt(part, 10));
+    if (parts.length >= 2 && parts.every((part) => Number.isFinite(part))) {
+      const [hours, minutes, seconds] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
+      return (hours * 60) + minutes + Math.round((seconds || 0) / 60);
+    }
+  }
   const hoursMatch = value.match(/(\d+)h/i);
   const minutesMatch = value.match(/(\d+)m/i);
   const secondsMatch = value.match(/(\d+)s/i);

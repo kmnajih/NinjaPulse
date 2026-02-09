@@ -27,7 +27,8 @@
 
       <section class="card summary">
         <h2>Sleep Details</h2>
-        <div class="stats" id="sleepDetails"></div>
+        <div class="stats" id="sleepDetailsPrimary"></div>
+        <div class="stats" id="sleepDetailsSecondary"></div>
       </section>
 
       <section class="card summary">
@@ -73,6 +74,16 @@
               <a class="file-btn ghost" id="connectGmailBtn" href="/gmail/login">Connect Gmail</a>
               <button id="refreshGmailBtn" class="ghost" disabled>Refresh phone usage</button>
               <button id="disconnectGmailBtn" class="ghost" disabled>Disconnect Gmail</button>
+            </div>
+          </div>
+          <div class="connection-card">
+            <div>
+              <h3>FTP</h3>
+              <p class="muted" id="ftpSummaryLine">FTP status will appear here.</p>
+            </div>
+            <div class="connection-actions">
+              <span class="status-pill" id="ftpStatus">Not configured</span>
+              <button id="refreshFtpBtn" class="ghost" disabled>Refresh FTP list</button>
             </div>
           </div>
         </div>
