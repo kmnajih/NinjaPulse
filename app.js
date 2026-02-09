@@ -166,16 +166,12 @@ function renderSleepDetails(details) {
     return;
   }
 
-  const primaryLabels = ["Sleep duration", "Sleep debt"];
-  const primary = [];
-  const secondary = [];
-  details.forEach((item) => {
-    if (primaryLabels.includes(item.label)) {
-      primary.push(item);
-    } else {
-      secondary.push(item);
-    }
-  });
+  const primaryLabels = ["Sleep duration", "Sleep debt", "HRV"];
+  const detailMap = new Map(details.map((item) => [item.label, item]));
+  const primary = primaryLabels
+    .map((label) => detailMap.get(label))
+    .filter(Boolean);
+  const secondary = details.filter((item) => !primaryLabels.includes(item.label));
 
   renderStats(sleepDetailsPrimaryEl, primary);
   renderStats(sleepDetailsSecondaryEl, secondary);
@@ -324,17 +320,14 @@ async function loadHabits() {
 function renderHabitsSection(data) {
   if (!data) {
     habitSummaryEl.innerHTML = "<p>Add Habitify API key to load habits.</p>";
+    habitSummaryEl.style.display = "block";
     habitListEl.innerHTML = "";
     return;
   }
 
   const habits = data.habits || [];
-  const done = habits.filter((habit) => habit.status === "done").length;
-  const pending = habits.filter((habit) => habit.status !== "done").length;
-  renderStats(habitSummaryEl, [
-    { label: "Done", value: String(done) },
-    { label: "Not done", value: String(pending) },
-  ]);
+  habitSummaryEl.innerHTML = "";
+  habitSummaryEl.style.display = "none";
 
   habitListEl.innerHTML = "";
   habits.forEach((habit) => {

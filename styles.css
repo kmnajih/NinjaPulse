@@ -198,6 +198,14 @@ p {
   gap: 20px;
 }
 
+.summary.tight {
+  gap: 10px;
+}
+
+.summary.tight .list {
+  margin-top: 0;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
