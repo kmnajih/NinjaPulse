@@ -4,100 +4,120 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Personal Health Dashboard</title>
-    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                950: "#0b1120"
+              }
+            }
+          }
+        }
+      };
+    </script>
   </head>
-  <body>
-    <div class="bg"></div>
-    <header class="site-header">
-      <div class="brand">
-        <div class="brand-mark">Ninja<br />Pulse</div>
-        <div>
-          <h1>Personal Health Dashboard</h1>
-          <p>Health insights with real-time metrics.</p>
-        </div>
+  <body class="bg-slate-50 text-slate-900">
+    <div class="min-h-screen">
+      <div class="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-slate-100 to-slate-50"></div>
+      <div class="absolute inset-0 -z-10">
+        <div class="h-full w-full bg-[radial-gradient(1000px_600px_at_10%_-10%,rgba(37,99,235,0.18),transparent_60%),radial-gradient(900px_520px_at_92%_0%,rgba(56,189,248,0.18),transparent_60%)]"></div>
       </div>
-      <div class="meta"></div>
-    </header>
 
-    <main class="container">
-      <section class="card summary">
-        <div class="summary-header">
-          <h2>Summary</h2>
-          <span class="summary-date" id="summaryDate">--</span>
-        </div>
-        <div class="stats" id="stats"></div>
-      </section>
-
-      <section class="card summary">
-        <h2>Sleep Details</h2>
-        <div class="stats" id="sleepDetailsPrimary"></div>
-        <div class="stats" id="sleepDetailsSecondary"></div>
-      </section>
-
-      <section class="card summary tight">
-        <h2>Phone Usage Details</h2>
-        <div class="stats" id="phoneSummary"></div>
-        <div class="section-title">
-          <h3>Top used apps</h3>
-        </div>
-        <div class="list" id="phoneApps"></div>
-      </section>
-
-      <section class="card summary tight">
-        <h2>Habits</h2>
-        <div class="stats" id="habitSummary"></div>
-        <div class="list" id="habitList"></div>
-      </section>
-
-      <section class="card connect">
-        <div>
-          <h2>Connections</h2>
-          <p>Authorize this local dashboard to read your data. Tokens stay on this machine.</p>
-        </div>
-        <div class="connections">
-          <div class="connection-card">
-            <div>
-              <h3>WHOOP</h3>
-              <p class="muted">Health metrics (sleep, recovery, HRV).</p>
-            </div>
-            <div class="connection-actions">
-              <span class="status-pill" id="whoopStatus">Not connected</span>
-              <a class="file-btn" id="connectBtn" href="/login">Connect WHOOP</a>
-              <button id="refreshWhoopBtn" class="ghost" disabled>Refresh health</button>
-              <button id="disconnectBtn" class="ghost" disabled>Disconnect WHOOP</button>
-            </div>
+      <header class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6 px-6 pb-6 pt-10 md:px-10">
+        <div class="flex items-center gap-4">
+          <div class="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-500 to-sky-400 text-center text-sm font-semibold uppercase tracking-wide text-white shadow-xl">
+            Ninja<br />Pulse
           </div>
-          <div class="connection-card">
-            <div>
-              <h3>Gmail</h3>
-              <p class="muted">App Usage daily digest.</p>
-            </div>
-            <div class="connection-actions">
-              <span class="status-pill" id="gmailStatus">Not connected</span>
-              <a class="file-btn ghost" id="connectGmailBtn" href="/gmail/login">Connect Gmail</a>
-              <button id="refreshGmailBtn" class="ghost" disabled>Refresh phone usage</button>
-              <button id="disconnectGmailBtn" class="ghost" disabled>Disconnect Gmail</button>
-            </div>
-          </div>
-          <div class="connection-card">
-            <div>
-              <h3>FTP</h3>
-              <p class="muted" id="ftpSummaryLine">FTP status will appear here.</p>
-            </div>
-            <div class="connection-actions">
-              <span class="status-pill" id="ftpStatus">Not configured</span>
-              <button id="refreshFtpBtn" class="ghost" disabled>Refresh FTP list</button>
-            </div>
+          <div>
+            <h1 class="text-2xl font-semibold text-slate-900 md:text-3xl">Personal Health Dashboard</h1>
+            <p class="text-sm text-slate-600">Health insights with real-time metrics.</p>
           </div>
         </div>
-        <div id="statusLine" class="drop">Waiting for connection.</div>
-      </section>
+        <div class="flex flex-wrap gap-2" id="meta"></div>
+      </header>
 
-    </main>
+      <main class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-16 md:px-10">
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold text-slate-900">Summary</h2>
+            <span class="text-sm font-semibold uppercase tracking-wide text-slate-500" id="summaryDate">--</span>
+          </div>
+          <div class="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" id="stats"></div>
+        </section>
 
-    <footer class="footer">
-      <span>Built for local use. No data leaves your machine.</span>
-    </footer>
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">Sleep Details</h2>
+          <div class="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" id="sleepDetailsPrimary"></div>
+          <div class="mt-4 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" id="sleepDetailsSecondary"></div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">Phone Usage Details</h2>
+          <div class="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" id="phoneSummary"></div>
+          <div class="mt-6 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-900">Top used apps</h3>
+          </div>
+          <div class="mt-3 grid gap-3" id="phoneApps"></div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">Habits</h2>
+          <div class="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" id="habitSummary"></div>
+          <div class="mt-4 grid gap-3" id="habitList"></div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900">Connections</h2>
+            <p class="mt-1 text-sm text-slate-600">Authorize this local dashboard to read your data. Tokens stay on this machine.</p>
+          </div>
+          <div class="mt-5 grid gap-4">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">WHOOP</h3>
+                <p class="text-sm text-slate-600">Health metrics (sleep, recovery, HRV).</p>
+              </div>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <span class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700" id="whoopStatus">Not connected</span>
+                <a class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700" id="connectBtn" href="/login">Connect WHOOP</a>
+                <button id="refreshWhoopBtn" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700" disabled>Refresh health</button>
+                <button id="disconnectBtn" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700" disabled>Disconnect WHOOP</button>
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">Gmail</h3>
+                <p class="text-sm text-slate-600">App Usage daily digest.</p>
+              </div>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <span class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700" id="gmailStatus">Not connected</span>
+                <a class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700" id="connectGmailBtn" href="/gmail/login">Connect Gmail</a>
+                <button id="refreshGmailBtn" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700" disabled>Refresh phone usage</button>
+                <button id="disconnectGmailBtn" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700" disabled>Disconnect Gmail</button>
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">FTP</h3>
+                <p class="text-sm text-slate-600" id="ftpSummaryLine">FTP status will appear here.</p>
+              </div>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <span class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700" id="ftpStatus">Not configured</span>
+                <button id="refreshFtpBtn" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700" disabled>Refresh FTP list</button>
+              </div>
+            </div>
+          </div>
+          <div id="statusLine" class="mt-6 rounded-xl border border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-medium text-blue-900">Waiting for connection.</div>
+        </section>
+      </main>
+
+      <footer class="mx-auto w-full max-w-6xl px-6 pb-10 text-sm text-slate-500 md:px-10">
+        <span>Built for local use. No data leaves your machine.</span>
+      </footer>
+    </div>
 
     <script src="app.js"></script>
   </body>

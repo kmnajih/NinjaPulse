@@ -134,7 +134,7 @@ async function fetchJson(path) {
 function renderStats(container, summary) {
   container.innerHTML = "";
   if (!summary?.length) {
-    container.innerHTML = "<p>No summary metrics yet.</p>";
+    container.innerHTML = "<p class=\"text-sm text-slate-500\">No summary metrics yet.</p>";
     return;
   }
 
@@ -145,8 +145,10 @@ function renderStats(container, summary) {
 
 function makeStat(label, value) {
   const card = document.createElement("div");
-  card.className = "stat";
+  card.className =
+    "flex flex-col items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-center shadow-sm";
   const title = document.createElement("h3");
+  title.className = "text-xs font-semibold uppercase tracking-wide text-slate-500";
   title.textContent = label;
   card.appendChild(title);
 
@@ -166,7 +168,7 @@ function makeStat(label, value) {
   }
 
   const val = document.createElement("div");
-  val.className = "value";
+  val.className = "grid h-28 w-full place-items-center text-2xl font-semibold text-slate-900";
   val.textContent = value;
   card.appendChild(val);
   return card;
@@ -176,7 +178,7 @@ function renderSleepDetails(details) {
   sleepDetailsPrimaryEl.innerHTML = "";
   sleepDetailsSecondaryEl.innerHTML = "";
   if (!details?.length) {
-    sleepDetailsPrimaryEl.innerHTML = "<p>No sleep details yet.</p>";
+    sleepDetailsPrimaryEl.innerHTML = "<p class=\"text-sm text-slate-500\">No sleep details yet.</p>";
     return;
   }
 
@@ -193,15 +195,48 @@ function renderSleepDetails(details) {
 
 function renderPercentRing(card, percent, color) {
   const ring = document.createElement("div");
-  ring.className = "recovery-ring";
-  ring.style.setProperty("--recovery", String(Number.isFinite(percent) ? percent : 0));
-  ring.style.setProperty("--recovery-color", color);
+  ring.className = "relative grid h-28 w-28 place-items-center";
+
+  const normalized = Number.isFinite(percent) ? percent : 0;
+  const size = 112;
+  const stroke = 10;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - normalized / 100);
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+  svg.setAttribute("class", "absolute inset-0 h-full w-full -rotate-90");
+
+  const track = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  track.setAttribute("cx", String(size / 2));
+  track.setAttribute("cy", String(size / 2));
+  track.setAttribute("r", String(radius));
+  track.setAttribute("fill", "none");
+  track.setAttribute("stroke", "#e2e8f0");
+  track.setAttribute("stroke-width", String(stroke));
+
+  const progress = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  progress.setAttribute("cx", String(size / 2));
+  progress.setAttribute("cy", String(size / 2));
+  progress.setAttribute("r", String(radius));
+  progress.setAttribute("fill", "none");
+  progress.setAttribute("stroke", color);
+  progress.setAttribute("stroke-width", String(stroke));
+  progress.setAttribute("stroke-linecap", "round");
+  progress.setAttribute("stroke-dasharray", String(circumference));
+  progress.setAttribute("stroke-dashoffset", String(offset));
+
+  svg.appendChild(track);
+  svg.appendChild(progress);
+  ring.appendChild(svg);
 
   const inner = document.createElement("div");
-  inner.className = "recovery-inner";
+  inner.className =
+    "grid h-20 w-20 place-items-center rounded-full border border-slate-200 bg-white text-lg font-semibold text-slate-900 shadow-sm";
   inner.textContent = Number.isFinite(percent) ? `${percent}%` : "-";
   ring.appendChild(inner);
-  card.classList.add("recovery");
+
   card.appendChild(ring);
   return card;
 }
@@ -285,7 +320,8 @@ async function loadFtpFiles() {
 
 function renderPhoneUsageSection(data) {
   if (!data) {
-    phoneSummaryEl.innerHTML = "<p>Connect Gmail or configure FTP to load phone usage.</p>";
+    phoneSummaryEl.innerHTML =
+      "<p class=\"text-sm text-slate-500\">Connect Gmail or configure FTP to load phone usage.</p>";
     phoneAppsEl.innerHTML = "";
     return;
   }
@@ -304,10 +340,13 @@ function renderPhoneUsageSection(data) {
   if (!apps.length) return;
   apps.forEach((app) => {
     const row = document.createElement("div");
-    row.className = "list-item";
+    row.className =
+      "flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm";
     const name = document.createElement("strong");
+    name.className = "text-slate-900";
     name.textContent = app.name;
     const info = document.createElement("span");
+    info.className = "text-slate-500";
     info.textContent = `${app.usage_time || "-"}`;
     row.appendChild(name);
     row.appendChild(info);
@@ -333,7 +372,7 @@ async function loadHabits() {
 
 function renderHabitsSection(data) {
   if (!data) {
-    habitSummaryEl.innerHTML = "<p>Add Habitify API key to load habits.</p>";
+    habitSummaryEl.innerHTML = "<p class=\"text-sm text-slate-500\">Add Habitify API key to load habits.</p>";
     habitSummaryEl.style.display = "block";
     habitListEl.innerHTML = "";
     return;
@@ -346,11 +385,16 @@ function renderHabitsSection(data) {
   habitListEl.innerHTML = "";
   habits.forEach((habit) => {
     const row = document.createElement("div");
-    row.className = "list-item";
+    row.className =
+      "flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm";
     const name = document.createElement("strong");
+    name.className = "text-slate-900";
     name.textContent = habit.name;
     const badge = document.createElement("span");
-    badge.className = habit.status === "done" ? "badge done" : "badge pending";
+    badge.className =
+      habit.status === "done"
+        ? "rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+        : "rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700";
     badge.textContent = habit.status === "done" ? "Done" : "Not done";
     row.appendChild(name);
     row.appendChild(badge);
