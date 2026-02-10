@@ -4,6 +4,7 @@ const disconnectBtn = document.getElementById("disconnectBtn");
 const disconnectGmailBtn = document.getElementById("disconnectGmailBtn");
 const refreshGmailBtn = document.getElementById("refreshGmailBtn");
 const refreshFtpBtn = document.getElementById("refreshFtpBtn");
+const summaryDateEl = document.getElementById("summaryDate");
 const statsEl = document.getElementById("stats");
 const sleepDetailsPrimaryEl = document.getElementById("sleepDetailsPrimary");
 const sleepDetailsSecondaryEl = document.getElementById("sleepDetailsSecondary");
@@ -47,6 +48,8 @@ disconnectGmailBtn.addEventListener("click", async () => {
 });
 
 async function init() {
+  updateSummaryDate();
+
   const status = await fetchJson("/api/status");
   const gmailStatus = await fetchJson("/api/gmail/status");
   const ftpStatus = await fetchJson("/api/ftp/status");
@@ -82,6 +85,17 @@ async function init() {
     ftpStatusEl.textContent = "Not configured";
     renderFtpStatus(null);
   }
+}
+
+function updateSummaryDate() {
+  if (!summaryDateEl) return;
+  const now = new Date();
+  summaryDateEl.textContent = now.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 async function loadDashboard() {
