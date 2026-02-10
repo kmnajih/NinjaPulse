@@ -18,6 +18,33 @@ const gmailStatusEl = document.getElementById("gmailStatus");
 const ftpStatusEl = document.getElementById("ftpStatus");
 
 const PHONE_APP_MINUTES_THRESHOLD = 30;
+const SIMPLE_ICON_BASE = "https://cdn.simpleicons.org";
+const FAVICON_BASE = "https://ico.faviconkit.net/favicon";
+const APP_ICON_MAP = new Map([
+  ["chrome", { slug: "googlechrome", domain: "google.com" }],
+  ["google chrome", { slug: "googlechrome", domain: "google.com" }],
+  ["gmail", { slug: "gmail", domain: "gmail.com" }],
+  ["youtube", { slug: "youtube", domain: "youtube.com" }],
+  ["instagram", { slug: "instagram", domain: "instagram.com" }],
+  ["facebook", { slug: "facebook", domain: "facebook.com" }],
+  ["messenger", { slug: "messenger", domain: "messenger.com" }],
+  ["whatsapp", { slug: "whatsapp", domain: "whatsapp.com" }],
+  ["tiktok", { slug: "tiktok", domain: "tiktok.com" }],
+  ["snapchat", { slug: "snapchat", domain: "snapchat.com" }],
+  ["reddit", { slug: "reddit", domain: "reddit.com" }],
+  ["spotify", { slug: "spotify", domain: "spotify.com" }],
+  ["linkedin", { slug: "linkedin", domain: "linkedin.com" }],
+  ["slack", { slug: "slack", domain: "slack.com" }],
+  ["notion", { slug: "notion", domain: "notion.so" }],
+  ["discord", { slug: "discord", domain: "discord.com" }],
+  ["zoom", { slug: "zoom", domain: "zoom.us" }],
+  ["telegram", { slug: "telegram", domain: "telegram.org" }],
+  ["signal", { slug: "signal", domain: "signal.org" }],
+  ["netflix", { slug: "netflix", domain: "netflix.com" }],
+  ["github", { slug: "github", domain: "github.com" }],
+  ["x", { slug: "x", domain: "x.com" }],
+  ["twitter", { slug: "x", domain: "x.com" }],
+]);
 
 refreshWhoopBtn.addEventListener("click", () => loadDashboard());
 refreshGmailBtn.addEventListener("click", () => loadPhoneUsage());
@@ -342,13 +369,18 @@ function renderPhoneUsageSection(data) {
     const row = document.createElement("div");
     row.className =
       "flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm";
+    const left = document.createElement("div");
+    left.className = "flex items-center gap-3";
+    const icon = createAppIconElement(app.name);
     const name = document.createElement("strong");
     name.className = "text-slate-900";
     name.textContent = app.name;
     const info = document.createElement("span");
     info.className = "text-slate-500";
     info.textContent = `${app.usage_time || "-"}`;
-    row.appendChild(name);
+    left.appendChild(icon);
+    left.appendChild(name);
+    row.appendChild(left);
     row.appendChild(info);
     phoneAppsEl.appendChild(row);
   });
@@ -454,6 +486,67 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleDateString();
+}
+
+function normalizeAppName(value) {
+  return String(value || "").toLowerCase().trim();
+}
+
+function getAppIconMeta(appName) {
+  const normalized = normalizeAppName(appName);
+  if (APP_ICON_MAP.has(normalized)) return APP_ICON_MAP.get(normalized);
+  const simplified = normalized.replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "");
+  return APP_ICON_MAP.get(simplified);
+}
+
+function createAppIconElement(appName) {
+  const wrapper = document.createElement("div");
+  wrapper.className =
+    "flex h-7 w-7 items-center justify-center rounded-md bg-white ring-1 ring-slate-200 shadow-sm";
+
+  const meta = getAppIconMeta(appName);
+  const img = document.createElement("img");
+  img.alt = `${appName} icon`;
+  img.loading = "lazy";
+  img.className = "h-5 w-5";
+
+  const fallbackToInitials = () => {
+    const initials = String(appName || "?")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase();
+    const badge = document.createElement("span");
+    badge.className = "text-[10px] font-semibold text-slate-600";
+    badge.textContent = initials || "?";
+    wrapper.innerHTML = "";
+    wrapper.appendChild(badge);
+  };
+
+  const setFavicon = () => {
+    if (meta?.domain) {
+      img.onerror = () => fallbackToInitials();
+      img.src = `${FAVICON_BASE}/${meta.domain}?sz=64`;
+      wrapper.appendChild(img);
+      return true;
+    }
+    return false;
+  };
+
+  if (meta?.slug) {
+    img.onerror = () => {
+      if (!setFavicon()) fallbackToInitials();
+    };
+    img.src = `${SIMPLE_ICON_BASE}/${meta.slug}?viewbox=auto`;
+    wrapper.appendChild(img);
+    return wrapper;
+  }
+
+  if (setFavicon()) return wrapper;
+  fallbackToInitials();
+  return wrapper;
 }
 
 init();
