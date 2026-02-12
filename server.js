@@ -66,6 +66,54 @@ function parseBoolean(value, fallback = true) {
   return fallback;
 }
 
+function formatLocalIsoDate(date) {
+  const pad = (num) => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function shiftDays(date, days) {
+  const shifted = new Date(date);
+  shifted.setDate(shifted.getDate() + days);
+  return shifted;
+}
+
+function parseUsageDateToIso(value) {
+  if (!value) return null;
+  const normalized = String(value).trim();
+  const slashMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (slashMatch) {
+    const month = Number.parseInt(slashMatch[1], 10);
+    const day = Number.parseInt(slashMatch[2], 10);
+    const rawYear = Number.parseInt(slashMatch[3], 10);
+    const year = slashMatch[3].length === 2 ? (2000 + rawYear) : rawYear;
+    if (!Number.isFinite(month) || !Number.isFinite(day) || !Number.isFinite(year)) return null;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return formatLocalIsoDate(parsed);
+}
+
+function isFreshFtpPhoneUsage(payload, now = new Date()) {
+  if (!payload || payload.source !== "ftp") return false;
+  const expectedDirectory = formatLocalIsoDate(now);
+  if (payload.directory !== expectedDirectory) return false;
+
+  const usageDateIso = parseUsageDateToIso(payload?.daily?.date);
+  if (!usageDateIso) return false;
+  const expectedUsageDate = formatLocalIsoDate(shiftDays(now, -1));
+  return usageDateIso === expectedUsageDate;
+}
+
+function isUpdatedToday(value, now = new Date()) {
+  if (!value) return false;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return formatLocalIsoDate(parsed) === formatLocalIsoDate(now);
+}
+
 const ftpClient = createFtpClient({
   config: {
     host: process.env.FTP_HOST || "",
@@ -96,6 +144,13 @@ function clearState(filePath) {
 async function handleApiPhone(res) {
   let ftpPayload = null;
   if (ftpClient.isConfigured()) {
+    const cached = readJson(paths.gmail.phoneUsagePath);
+    if (isFreshFtpPhoneUsage(cached)) {
+      logEvent("FTP phone usage: using cached file", `file=${cached.file || "unknown"}`);
+      sendJson(res, 200, cached);
+      return;
+    }
+
     try {
       logEvent("FTP phone usage: checking latest CSV");
       const latest = await ftpClient.fetchLatestUsageCsv();
@@ -177,6 +232,13 @@ async function handleApiFtp(res) {
   if (!ftpClient.isConfigured()) {
     logEvent("FTP list: not configured");
     sendJson(res, 500, { error: "FTP not configured." });
+    return;
+  }
+
+  const cached = readJson(paths.ftp.filesPath);
+  if (cached?.path && Array.isArray(cached?.files) && isUpdatedToday(cached.updated_at)) {
+    logEvent("FTP list: using cached");
+    sendJson(res, 200, cached);
     return;
   }
 
