@@ -23,7 +23,12 @@ const FAVICON_BASE = "https://ico.faviconkit.net/favicon";
 const APP_ICON_MAP = new Map([
   ["chrome", { slug: "googlechrome", domain: "google.com" }],
   ["google chrome", { slug: "googlechrome", domain: "google.com" }],
+  ["google", { slug: "google", domain: "google.com" }],
   ["gmail", { slug: "gmail", domain: "gmail.com" }],
+  ["amazon", { slug: "amazon", domain: "amazon.com" }],
+  ["amazon shopping", { slug: "amazon", domain: "amazon.com" }],
+  ["chatgpt", { slug: "openai", domain: "chatgpt.com" }],
+  ["chat gpt", { slug: "openai", domain: "chatgpt.com" }],
   ["youtube", { slug: "youtube", domain: "youtube.com" }],
   ["instagram", { slug: "instagram", domain: "instagram.com" }],
   ["facebook", { slug: "facebook", domain: "facebook.com" }],
